@@ -1,10 +1,14 @@
 // Initialize the map
 var map = L.map('map').setView([37.7749, -122.4194], 5);
 
-// Add a tile layer
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+// Add base layers
+var streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
+
+var darkMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a>'
+});
 
 // Function to determine marker size based on magnitude
 function markerSize(magnitude) {
@@ -24,7 +28,8 @@ function markerColor(depth) {
 // URL to fetch earthquake data
 var earthquakeUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
 
-// Fetch the data
+// Fetch the earthquake data
+var earthquakes = new L.LayerGroup();
 d3.json(earthquakeUrl).then(function(data) {
     // Add a GeoJSON layer to the map
     L.geoJSON(data, {
@@ -43,7 +48,23 @@ d3.json(earthquakeUrl).then(function(data) {
                              <hr><p>Magnitude: ${feature.properties.mag}</p>
                              <p>Depth: ${feature.geometry.coordinates[2]} km</p>`);
         }
-    }).addTo(map);
+    }).addTo(earthquakes);
+});
+
+// URL to fetch tectonic plates data
+var tectonicPlatesUrl = "https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json";
+
+// Fetch the tectonic plates data
+var tectonicPlates = new L.LayerGroup();
+d3.json(tectonicPlatesUrl).then(function(data) {
+    L.geoJSON(data, {
+        style: function(feature) {
+            return {
+                color: "orange",
+                weight: 2
+            };
+        }
+    }).addTo(tectonicPlates);
 });
 
 // Add a legend to the map
@@ -66,3 +87,25 @@ legend.onAdd = function(map) {
 };
 
 legend.addTo(map);
+
+// Define baseMaps object to hold base layers
+var baseMaps = {
+    "Street Map": streetMap,
+    "Dark Map": darkMap
+};
+
+// Define overlay object to hold overlay layers
+var overlayMaps = {
+    "Earthquakes": earthquakes,
+    "Tectonic Plates": tectonicPlates
+};
+
+// Create a layer control
+// Pass it baseMaps and overlayMaps
+// Add the layer control to the map
+L.control.layers(baseMaps, overlayMaps, {
+    collapsed: false
+}).addTo(map);
+
+// Add the earthquakes layer to the map by default
+earthquakes.addTo(map);
